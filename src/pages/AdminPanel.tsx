@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, UserPlus, Trash2, MapPin, Shield } from 'lucide-react';
+import { Loader2, UserPlus, Trash2, MapPin, Shield, Building } from 'lucide-react';
 import { createAdminUser } from '@/lib/adminUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -47,7 +47,13 @@ export default function AdminPanel() {
   const [approvingRegistration, setApprovingRegistration] = useState(false);
   const [editingValidityDate, setEditingValidityDate] = useState(false);
   const [newValidityDate, setNewValidityDate] = useState('');
-  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions' | 'config'>('users');
+  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions' | 'config' | 'cities'>('users');
+  const [registeredCities, setRegisteredCities] = useState<any[]>([]);
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [newCityName, setNewCityName] = useState('');
+  const [newCityState, setNewCityState] = useState('');
+  const [addingCity, setAddingCity] = useState(false);
+  const [deletingCity, setDeletingCity] = useState(false);
   const [promotionLimits, setPromotionLimits] = useState({
     basic_test_max_prizes: 10,
     monthly_annual_max_prizes: 100,
@@ -516,6 +522,102 @@ export default function AdminPanel() {
     }
   };
 
+  const loadRegisteredCities = async () => {
+    setLoadingCities(true);
+    try {
+      const { data, error } = await supabase
+        .from('registered_cities')
+        .select('*')
+        .order('state', { ascending: true })
+        .order('city', { ascending: true });
+
+      if (error) throw error;
+      setRegisteredCities(data || []);
+    } catch (error: any) {
+      toast({
+        title: "Erro ao carregar cidades",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingCities(false);
+    }
+  };
+
+  const handleAddCity = async () => {
+    if (!newCityName.trim() || !newCityState.trim()) {
+      toast({
+        title: "Campos obrigatórios",
+        description: "Preencha cidade e estado.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setAddingCity(true);
+    try {
+      const { error } = await supabase
+        .from('registered_cities')
+        .insert({
+          city: newCityName.trim(),
+          state: newCityState.trim().toUpperCase()
+        });
+
+      if (error) {
+        if (error.code === '23505') {
+          throw new Error('Esta cidade/estado já está cadastrada.');
+        }
+        throw error;
+      }
+
+      toast({
+        title: "Cidade cadastrada!",
+        description: `${newCityName.trim()} - ${newCityState.trim().toUpperCase()} adicionada com sucesso.`,
+      });
+
+      setNewCityName('');
+      setNewCityState('');
+      loadRegisteredCities();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setAddingCity(false);
+    }
+  };
+
+  const handleDeleteCity = async (cityId: string, cityName: string, cityState: string) => {
+    if (!confirm(`Tem certeza que deseja excluir ${cityName} - ${cityState}?`)) return;
+
+    setDeletingCity(true);
+    try {
+      const { error } = await supabase
+        .from('registered_cities')
+        .delete()
+        .eq('id', cityId);
+
+      if (error) throw error;
+
+      toast({
+        title: "Cidade excluída!",
+        description: `${cityName} - ${cityState} removida com sucesso.`,
+      });
+
+      loadRegisteredCities();
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingCity(false);
+    }
+  };
+
   const checkAdminStatus = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -778,6 +880,7 @@ export default function AdminPanel() {
     { id: 'password', label: 'Mudar Senha', icon: Key, color: 'bg-amber-500 hover:bg-amber-600' },
     { id: 'list', label: 'Lista Usuários', icon: List, color: 'bg-purple-500 hover:bg-purple-600' },
     { id: 'shortcuts', label: 'Atalhos Etapas', icon: Zap, color: 'bg-cyan-500 hover:bg-cyan-600' },
+    { id: 'cities', label: 'Cidades Cadastradas', icon: Building, color: 'bg-teal-500 hover:bg-teal-600' },
   ];
 
   return (
@@ -838,6 +941,7 @@ export default function AdminPanel() {
                     if (button.id === 'sponsors-list') loadSponsors();
                     if (button.id === 'registrations') loadSponsorRegistrations();
                     if (button.id === 'pending-promotions') loadPendingPromotions();
+                    if (button.id === 'cities') loadRegisteredCities();
                   }
                 }}
                 className={`${button.color} text-white h-24 flex flex-col items-center justify-center gap-2 transition-all`}
@@ -2243,6 +2347,75 @@ export default function AdminPanel() {
                   Ir para Etapa 5
                 </Button>
               </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {activeSection === 'cities' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Cidades Cadastradas</CardTitle>
+              <CardDescription>Gerencie as cidades onde patrocinadores e promoções podem ser cadastrados</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 space-y-1">
+                  <Label>Cidade</Label>
+                  <Input
+                    placeholder="Nome da cidade"
+                    value={newCityName}
+                    onChange={(e) => setNewCityName(e.target.value)}
+                  />
+                </div>
+                <div className="w-24 space-y-1">
+                  <Label>UF</Label>
+                  <Input
+                    placeholder="UF"
+                    maxLength={2}
+                    value={newCityState}
+                    onChange={(e) => setNewCityState(e.target.value.toUpperCase())}
+                  />
+                </div>
+                <Button onClick={handleAddCity} disabled={addingCity}>
+                  {addingCity ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Adicionar'}
+                </Button>
+              </div>
+
+              {loadingCities ? (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : registeredCities.length === 0 ? (
+                <p className="text-center text-muted-foreground p-8">Nenhuma cidade cadastrada</p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Cidade</TableHead>
+                      <TableHead>Estado</TableHead>
+                      <TableHead className="w-20">Ações</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {registeredCities.map((city) => (
+                      <TableRow key={city.id}>
+                        <TableCell>{city.city}</TableCell>
+                        <TableCell>{city.state}</TableCell>
+                        <TableCell>
+                          <Button
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteCity(city.id, city.city, city.state)}
+                            disabled={deletingCity}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
             </CardContent>
           </Card>
         )}

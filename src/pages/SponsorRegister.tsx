@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Building2, Upload, ArrowLeft, Loader2, CheckCircle, XCircle, Shield, MapPin } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import paymentQRCode from '@/assets/payment-qrcode.jpg';
@@ -41,6 +42,7 @@ export default function SponsorRegister() {
   const [loading, setLoading] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
   const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null);
+  const [registeredCities, setRegisteredCities] = useState<any[]>([]);
   const renewalData = location.state?.renewalData;
   const isRenewal = !!renewalData;
   
@@ -79,6 +81,7 @@ export default function SponsorRegister() {
       }
 
       await loadPromotionLimits();
+      await loadRegisteredCities();
       setLoading(false);
     } catch (error) {
       console.error('Erro ao verificar autenticação:', error);
@@ -101,6 +104,22 @@ export default function SponsorRegister() {
       console.error('Erro ao carregar limites:', error);
     }
   };
+
+  const loadRegisteredCities = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('registered_cities')
+        .select('*')
+        .order('state')
+        .order('city');
+
+      if (error) throw error;
+      setRegisteredCities(data || []);
+    } catch (error) {
+      console.error('Erro ao carregar cidades:', error);
+    }
+  };
+
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -430,34 +449,39 @@ export default function SponsorRegister() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="city">Cidade *</Label>
-                <Input
-                  id="city"
-                  type="text"
-                  placeholder="Sua cidade"
-                  value={formData.city}
-                  onChange={(e) => {
-                    setFormData({ ...formData, city: e.target.value });
-                    setGeoLocation(null); // Reset geolocation when address changes
+                <Select
+                  value={formData.city && formData.state ? `${formData.city}|${formData.state}` : ''}
+                  onValueChange={(value) => {
+                    const [city, state] = value.split('|');
+                    setFormData({ ...formData, city, state });
+                    setGeoLocation(null);
                   }}
-                  className={isRenewal && renewalData?.city ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
-                  required
-                />
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a cidade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {registeredCities.map((c) => (
+                      <SelectItem key={c.id} value={`${c.city}|${c.state}`}>
+                        {c.city} - {c.state}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {registeredCities.length === 0 && (
+                  <p className="text-xs text-destructive">Nenhuma cidade cadastrada. Contate o administrador.</p>
+                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="state">Estado *</Label>
+                <Label htmlFor="state">Estado</Label>
                 <Input
                   id="state"
                   type="text"
-                  placeholder="UF"
-                  maxLength={2}
                   value={formData.state}
-                  onChange={(e) => {
-                    setFormData({ ...formData, state: e.target.value.toUpperCase() });
-                    setGeoLocation(null); // Reset geolocation when address changes
-                  }}
-                  className={isRenewal && renewalData?.state ? "bg-yellow-100 dark:bg-yellow-900/30" : "bg-background"}
-                  required
+                  readOnly
+                  disabled
+                  className="bg-muted cursor-not-allowed"
                 />
               </div>
             </div>
