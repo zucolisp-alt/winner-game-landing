@@ -880,6 +880,7 @@ export default function AdminPanel() {
     { id: 'password', label: 'Mudar Senha', icon: Key, color: 'bg-amber-500 hover:bg-amber-600' },
     { id: 'list', label: 'Lista Usuários', icon: List, color: 'bg-purple-500 hover:bg-purple-600' },
     { id: 'shortcuts', label: 'Atalhos Etapas', icon: Zap, color: 'bg-cyan-500 hover:bg-cyan-600' },
+    { id: 'cities', label: 'Cidades Cadastradas', icon: Building, color: 'bg-teal-500 hover:bg-teal-600' },
   ];
 
   return (
