@@ -159,6 +159,17 @@ export default function CreatePromotion() {
         variant: "destructive",
       });
     } finally {
+      // Load registered cities
+      try {
+        const { data: citiesData } = await supabase
+          .from('registered_cities')
+          .select('*')
+          .order('state')
+          .order('city');
+        setRegisteredCities(citiesData || []);
+      } catch (e) {
+        console.error('Erro ao carregar cidades:', e);
+      }
       setVerifying(false);
     }
   };
@@ -1004,17 +1015,29 @@ export default function CreatePromotion() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="city">Cidade</Label>
-                  <Input
-                    id="city"
-                    value={formData.city}
-                    onChange={(e) => {
-                      setFormData({ ...formData, city: e.target.value });
+                  <Select
+                    value={formData.city && formData.state ? `${formData.city}|${formData.state}` : ''}
+                    onValueChange={(value) => {
+                      const [city, state] = value.split('|');
+                      setFormData({ ...formData, city, state });
                       setGeoLocation(null);
                     }}
-                    placeholder="Digite a cidade"
-                    className={isAdmin ? "bg-background" : "bg-yellow-200 dark:bg-yellow-900"}
                     disabled={!isAdmin && !!sponsorData?.city}
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a cidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {registeredCities.map((c) => (
+                        <SelectItem key={c.id} value={`${c.city}|${c.state}`}>
+                          {c.city} - {c.state}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {registeredCities.length === 0 && (
+                    <p className="text-xs text-destructive">Nenhuma cidade cadastrada.</p>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -1022,14 +1045,9 @@ export default function CreatePromotion() {
                   <Input
                     id="state"
                     value={formData.state}
-                    onChange={(e) => {
-                      setFormData({ ...formData, state: e.target.value.toUpperCase() });
-                      setGeoLocation(null);
-                    }}
-                    placeholder="Ex: SP"
-                    maxLength={2}
-                    className={isAdmin ? "bg-background" : "bg-yellow-200 dark:bg-yellow-900"}
-                    disabled={!isAdmin && !!sponsorData?.state}
+                    readOnly
+                    disabled
+                    className="bg-muted cursor-not-allowed"
                   />
                 </div>
               </div>
