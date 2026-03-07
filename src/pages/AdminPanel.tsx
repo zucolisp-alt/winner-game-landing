@@ -91,6 +91,13 @@ export default function AdminPanel() {
   });
   const [savingSponsor, setSavingSponsor] = useState(false);
   const [geocodingSponsor, setGeocodingSponsor] = useState(false);
+  const [geocodeConfirmation, setGeocodeConfirmation] = useState<{
+    latitude: number;
+    longitude: number;
+    formatted_address: string;
+    confidence: string;
+  } | null>(null);
+  const [showGeocodeConfirm, setShowGeocodeConfirm] = useState(false);
 
   useEffect(() => {
     checkAdminStatus();
@@ -683,25 +690,55 @@ export default function AdminPanel() {
 
   const handleGeocodeSponsor = async () => {
     if (!editingSponsor) return;
-    const fullAddress = `${editSponsorData.address}, ${editSponsorData.city}, ${editSponsorData.state}, Brasil`;
     setGeocodingSponsor(true);
     try {
-      const response = await supabase.functions.invoke('geocode-address', {
-        body: { address: fullAddress }
+      const response = await supabase.functions.invoke('ai-geocode', {
+        body: { 
+          address: editSponsorData.address,
+          city: editSponsorData.city,
+          state: editSponsorData.state
+        }
       });
 
-      let latitude = null;
-      let longitude = null;
-      if (response.data?.lat && response.data?.lon) {
-        latitude = response.data.lat;
-        longitude = response.data.lon;
+      if (response.error) throw new Error(response.error.message || 'Erro na geocodificação');
+
+      const data = response.data;
+      if (!data?.success || !data?.latitude || !data?.longitude) {
+        toast({
+          title: "Não encontrado",
+          description: data?.error || "Não foi possível encontrar a geolocalização deste endereço.",
+          variant: "destructive",
+        });
+        return;
       }
 
+      setGeocodeConfirmation({
+        latitude: data.latitude,
+        longitude: data.longitude,
+        formatted_address: data.formatted_address,
+        confidence: data.confidence,
+      });
+      setShowGeocodeConfirm(true);
+    } catch (error: any) {
+      toast({
+        title: "Erro",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setGeocodingSponsor(false);
+    }
+  };
+
+  const handleConfirmGeocode = async () => {
+    if (!editingSponsor || !geocodeConfirmation) return;
+    setSavingSponsor(true);
+    try {
       const { error } = await supabase
         .from('sponsors')
         .update({ 
-          latitude, 
-          longitude,
+          latitude: geocodeConfirmation.latitude, 
+          longitude: geocodeConfirmation.longitude,
           address: editSponsorData.address,
           city: editSponsorData.city,
           state: editSponsorData.state.toUpperCase(),
@@ -710,12 +747,16 @@ export default function AdminPanel() {
 
       if (error) throw error;
 
-      setEditingSponsor({ ...editingSponsor, latitude, longitude });
+      setEditingSponsor({ 
+        ...editingSponsor, 
+        latitude: geocodeConfirmation.latitude, 
+        longitude: geocodeConfirmation.longitude 
+      });
+      setShowGeocodeConfirm(false);
+      setGeocodeConfirmation(null);
       toast({
         title: "Sucesso!",
-        description: latitude 
-          ? `Geolocalização atualizada: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}` 
-          : "Endereço salvo (geolocalização não encontrada).",
+        description: `Geolocalização atualizada: ${geocodeConfirmation.latitude.toFixed(4)}, ${geocodeConfirmation.longitude.toFixed(4)}`,
       });
       loadSponsors();
     } catch (error: any) {
@@ -725,7 +766,7 @@ export default function AdminPanel() {
         variant: "destructive",
       });
     } finally {
-      setGeocodingSponsor(false);
+      setSavingSponsor(false);
     }
   };
 
@@ -1962,6 +2003,84 @@ export default function AdminPanel() {
                       <Button
                         variant="outline"
                         onClick={() => setEditingSponsor(null)}
+                      >
+                        Cancelar
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
+
+            {/* Geocode Confirmation Dialog */}
+            <Dialog open={showGeocodeConfirm} onOpenChange={setShowGeocodeConfirm}>
+              <DialogContent className="max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Confirmar Geolocalização</DialogTitle>
+                  <DialogDescription>
+                    Verifique os dados retornados pela IA antes de salvar.
+                  </DialogDescription>
+                </DialogHeader>
+                {geocodeConfirmation && (
+                  <div className="space-y-4">
+                    <div className="p-4 rounded-lg bg-muted space-y-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Endereço Pesquisado</Label>
+                        <p className="text-sm font-medium">
+                          {editSponsorData.address}, {editSponsorData.city} - {editSponsorData.state}
+                        </p>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Endereço Encontrado pela IA</Label>
+                        <p className="text-sm font-medium">{geocodeConfirmation.formatted_address}</p>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Latitude</Label>
+                          <p className="text-sm font-mono font-medium">{geocodeConfirmation.latitude.toFixed(6)}</p>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Longitude</Label>
+                          <p className="text-sm font-mono font-medium">{geocodeConfirmation.longitude.toFixed(6)}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">Nível de Confiança</Label>
+                        <p className={`text-sm font-medium ${
+                          geocodeConfirmation.confidence === 'high' ? 'text-green-600' :
+                          geocodeConfirmation.confidence === 'medium' ? 'text-yellow-600' :
+                          'text-red-600'
+                        }`}>
+                          {geocodeConfirmation.confidence === 'high' ? '🟢 Alta' :
+                           geocodeConfirmation.confidence === 'medium' ? '🟡 Média' :
+                           '🔴 Baixa'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-3">
+                      <Button
+                        className="flex-1"
+                        onClick={handleConfirmGeocode}
+                        disabled={savingSponsor}
+                      >
+                        {savingSponsor ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Salvando...
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle className="mr-2 h-4 w-4" />
+                            Confirmar e Salvar
+                          </>
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => {
+                          setShowGeocodeConfirm(false);
+                          setGeocodeConfirmation(null);
+                        }}
                       >
                         Cancelar
                       </Button>
