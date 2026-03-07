@@ -81,6 +81,16 @@ export default function AdminPanel() {
   const [newCity, setNewCity] = useState('');
   const [newState, setNewState] = useState('');
   const [geocodingAddress, setGeocodingAddress] = useState(false);
+  const [editingSponsor, setEditingSponsor] = useState<any | null>(null);
+  const [editSponsorData, setEditSponsorData] = useState({
+    promotion_end_date: '',
+    prize_description: '',
+    address: '',
+    city: '',
+    state: '',
+  });
+  const [savingSponsor, setSavingSponsor] = useState(false);
+  const [geocodingSponsor, setGeocodingSponsor] = useState(false);
 
   useEffect(() => {
     checkAdminStatus();
