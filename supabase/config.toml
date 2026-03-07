@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.geocode-address]
 verify_jwt = false
+
+[functions.ai-geocode]
+verify_jwt = false
