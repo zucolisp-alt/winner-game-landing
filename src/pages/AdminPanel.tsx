@@ -1970,7 +1970,10 @@ export default function AdminPanel() {
                 )}
               </DialogContent>
             </Dialog>
+          </>
         )}
+
+        {activeSection === 'registrations' && (
           <>
             <Card>
               <CardHeader>
