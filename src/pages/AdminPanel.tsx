@@ -729,7 +729,7 @@ export default function AdminPanel() {
     }
   };
 
-
+  const checkAdminStatus = async () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
