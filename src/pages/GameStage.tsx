@@ -11,8 +11,10 @@ import { ColorSequence } from '@/components/ColorSequence';
 import { Minesweeper } from '@/components/Minesweeper';
 import { useGame } from '@/contexts/GameContext';
 import { useToast } from '@/hooks/use-toast';
-import { Timer, Target, LogOut } from 'lucide-react';
+import { useDailyPlayLimit } from '@/hooks/useDailyPlayLimit';
+import { Timer, Target, LogOut, AlertTriangle, Clock } from 'lucide-react';
 import { SettingsMenu } from '@/components/SettingsMenu';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const STAGE_BASE_POINTS = [100, 200, 300, 400, 500];
 
@@ -22,6 +24,7 @@ export default function GameStage() {
   const navigate = useNavigate();
   const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor } = useGame();
   const { toast } = useToast();
+  const { playsToday, maxDailyPlays, remainingPlays, isBlocked, showWarning, loading: limitLoading } = useDailyPlayLimit(userData?.name);
   
   const [showWheel, setShowWheel] = useState(true);
   const [showChallenge, setShowChallenge] = useState(false);
@@ -35,17 +38,12 @@ export default function GameStage() {
     const testSponsor = localStorage.getItem('testSponsor');
     
     if (testMode === 'true' && testSponsor) {
-      // Set test user data
       setUserData({
         name: 'Admin (Teste)',
         phone: '00000000000',
         email: 'admin@teste.com'
       });
-      
-      // Set test sponsor
       setSelectedSponsor(JSON.parse(testSponsor));
-      
-      // Clear test mode flag
       localStorage.removeItem('testMode');
       localStorage.removeItem('testSponsor');
     } else if (!userData) {
@@ -63,6 +61,17 @@ export default function GameStage() {
     return () => clearInterval(interval);
   }, [isTimerRunning]);
 
+  // Show warning toast when player has 5 or fewer plays remaining (only on stage 1)
+  useEffect(() => {
+    if (showWarning && stageNumber === 0 && !limitLoading) {
+      toast({
+        title: "⚠️ Atenção - Limite Diário",
+        description: `Você tem apenas ${remainingPlays} jogada(s) restante(s) de um total de ${maxDailyPlays} jogadas por dia.`,
+        className: "bg-yellow-100 dark:bg-yellow-900/50 border-yellow-500 text-yellow-900 dark:text-yellow-100",
+      });
+    }
+  }, [showWarning, stageNumber, limitLoading]);
+
   const handleWheelComplete = () => {
     setShowWheel(false);
     setShowChallenge(true);
@@ -73,9 +82,8 @@ export default function GameStage() {
     setIsTimerRunning(false);
     
     if (success) {
-      // Calcula pontos: pontos base mais bônus por tempo restante
       const basePoints = STAGE_BASE_POINTS[stageNumber];
-      const timeBonus = Math.floor((30 - timer) * 5); // 5 pontos por segundo restante
+      const timeBonus = Math.floor((30 - timer) * 5);
       const totalPoints = Math.max(basePoints + timeBonus, basePoints);
       
       addPoints(totalPoints);
@@ -123,7 +131,6 @@ export default function GameStage() {
   const handleNextStage = () => {
     if (stageNumber < 4) {
       navigate(`/stage/${stageNumber + 2}`);
-      // Reset state for next stage
       setShowWheel(true);
       setShowChallenge(false);
       setTimer(0);
@@ -132,6 +139,61 @@ export default function GameStage() {
       navigate('/results');
     }
   };
+
+  // If blocked, show daily limit reached message
+  if (!limitLoading && isBlocked && stageNumber === 0) {
+    return (
+      <div className="min-h-screen bg-background p-6">
+        <div className="max-w-2xl mx-auto space-y-6">
+          <div className="flex justify-end gap-2">
+            <SettingsMenu />
+          </div>
+          <div className="text-center">
+            <h1 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent mb-2">
+              Winning Game
+            </h1>
+          </div>
+
+          <SponsorBanner />
+
+          <div className="bg-card border-2 border-yellow-500 rounded-lg p-8 space-y-6 text-center animate-bounce-in">
+            <Clock className="w-20 h-20 text-yellow-500 mx-auto" />
+            <h2 className="text-2xl font-bold text-foreground">Limite Diário Atingido</h2>
+            <p className="text-muted-foreground text-lg">
+              Você já completou <strong>{playsToday}</strong> jogada(s) hoje.
+            </p>
+            <p className="text-muted-foreground">
+              O número máximo de jogadas por dia é <strong>{maxDailyPlays}</strong>.
+            </p>
+            <div className="bg-yellow-50 dark:bg-yellow-950/30 border border-yellow-400 rounded-lg p-4">
+              <p className="text-yellow-800 dark:text-yellow-200 font-medium">
+                ⏰ Aguarde o próximo ciclo diário para jogar novamente!
+              </p>
+              <p className="text-yellow-600 dark:text-yellow-400 text-sm mt-1">
+                O ciclo é renovado à meia-noite.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="xl"
+              onClick={() => navigate('/ranking')}
+              className="w-full"
+            >
+              VER RANKING
+            </Button>
+            <Button
+              variant="game"
+              size="xl"
+              onClick={() => window.location.href = '/'}
+              className="w-full"
+            >
+              VOLTAR AO INÍCIO
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background p-6">
@@ -145,6 +207,16 @@ export default function GameStage() {
           </h1>
           <p className="text-lg text-muted-foreground">Etapa {stageNumber + 1} de 5</p>
         </div>
+
+        {/* Warning when 5 or fewer plays remaining */}
+        {showWarning && stageNumber === 0 && (
+          <Alert className="bg-yellow-50 dark:bg-yellow-950/30 border-yellow-500">
+            <AlertTriangle className="h-4 w-4 text-yellow-600" />
+            <AlertDescription className="text-yellow-800 dark:text-yellow-200">
+              <strong>Atenção:</strong> Você tem apenas <strong>{remainingPlays}</strong> jogada(s) restante(s) de um total de <strong>{maxDailyPlays}</strong> por dia.
+            </AlertDescription>
+          </Alert>
+        )}
 
         <SponsorBanner />
         <PointsDisplay />
