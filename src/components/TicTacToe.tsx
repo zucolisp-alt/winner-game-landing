@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Trophy, X, Circle, Timer } from 'lucide-react';
 
 interface TicTacToeProps {
-  onComplete: () => void;
+  onComplete: (success?: boolean) => void;
   timeLimit: number;
 }
 
