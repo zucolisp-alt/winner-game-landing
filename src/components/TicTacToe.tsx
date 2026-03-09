@@ -107,10 +107,26 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
     setIsPlayerTurn(true);
     setWinningLine(null);
     setWins(0);
+    setFailures(0);
     setTimeLeft(timeLimit);
     setGameOver(false);
     setMessage('Ganhe 3 vezes em 60 segundos!');
   };
+
+  const handleFailure = useCallback((msg: string) => {
+    setFailures(prev => {
+      const newFailures = prev + 1;
+      if (newFailures >= 3) {
+        setMessage('❌ 3 derrotas/empates! Etapa finalizada com 0 pontos.');
+        setGameOver(true);
+        setTimeout(() => onComplete(false), 2000);
+      } else {
+        setMessage(`${msg} (${newFailures}/3 falhas)`);
+        setTimeout(resetBoard, 1500);
+      }
+      return newFailures;
+    });
+  }, [onComplete, resetBoard]);
 
   const handleCellClick = (index: number) => {
     if (!isPlayerTurn || board[index] || gameOver) return;
