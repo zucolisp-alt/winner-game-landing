@@ -63,6 +63,7 @@ export default function AdminPanel() {
     plan_monthly_price: 10.00,
     plan_annual_price: 10.00,
     max_daily_plays: 50,
+    map_radius_km: 25,
   });
   const [savingConfig, setSavingConfig] = useState(false);
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
