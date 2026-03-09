@@ -63,6 +63,7 @@ export default function AdminPanel() {
     plan_monthly_price: 10.00,
     plan_annual_price: 10.00,
     max_daily_plays: 50,
+    map_radius_km: 25,
   });
   const [savingConfig, setSavingConfig] = useState(false);
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
@@ -128,6 +129,7 @@ export default function AdminPanel() {
           plan_monthly_price: limits.plan_monthly_price ?? 10.00,
           plan_annual_price: limits.plan_annual_price ?? 10.00,
           max_daily_plays: limits.max_daily_plays ?? 50,
+          map_radius_km: limits.map_radius_km ?? 25,
         });
       }
     } catch (error) {
@@ -1248,6 +1250,26 @@ export default function AdminPanel() {
                       })}
                     />
                     <p className="text-xs text-muted-foreground">Número máximo de jogadas completas por dia por jogador</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4 p-4 border rounded-lg bg-muted/30">
+                <h3 className="font-semibold text-lg">Mapa de Promoções</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Raio do mapa (km)</Label>
+                    <Input
+                      type="number"
+                      min="1"
+                      max="500"
+                      value={promotionLimits.map_radius_km}
+                      onChange={(e) => setPromotionLimits({
+                        ...promotionLimits,
+                        map_radius_km: Math.min(500, Math.max(1, parseInt(e.target.value) || 25))
+                      })}
+                    />
+                    <p className="text-xs text-muted-foreground">Raio em quilômetros para exibir promoções ativas no mapa</p>
                   </div>
                 </div>
                 <div className="p-3 bg-accent/50 rounded-lg">
