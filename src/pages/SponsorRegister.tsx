@@ -39,6 +39,7 @@ export default function SponsorRegister() {
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [paymentProofPreview, setPaymentProofPreview] = useState<string>('');
   const [promotionLimits, setPromotionLimits] = useState<any>(null);
+  const [planOptions, setPlanOptions] = useState(DEFAULT_PLAN_OPTIONS);
   const [loading, setLoading] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
   const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null);
