@@ -571,7 +571,7 @@ export default function SponsorRegister() {
                 value={formData.plan}
                 onValueChange={(value) => setFormData({ ...formData, plan: value })}
               >
-                {PLAN_OPTIONS.map((option) => (
+                {planOptions.map((option) => (
                   <div key={option.value} className="flex items-center space-x-3 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors">
                     <RadioGroupItem value={option.value} id={option.value} />
                     <Label htmlFor={option.value} className="flex-1 cursor-pointer">
