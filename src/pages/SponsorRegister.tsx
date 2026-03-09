@@ -24,8 +24,8 @@ interface GeoLocation {
   formattedAddress?: string;
 }
 
-const PLAN_OPTIONS = [
-  { value: 'test', label: 'Teste', price: 10.00 },
+const DEFAULT_PLAN_OPTIONS = [
+  { value: 'weekly', label: 'Semanal', price: 10.00 },
   { value: 'monthly', label: 'Mensal', price: 50.00 },
   { value: 'annual', label: 'Anual', price: 400.00 },
 ];
@@ -39,6 +39,7 @@ export default function SponsorRegister() {
   const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
   const [paymentProofPreview, setPaymentProofPreview] = useState<string>('');
   const [promotionLimits, setPromotionLimits] = useState<any>(null);
+  const [planOptions, setPlanOptions] = useState(DEFAULT_PLAN_OPTIONS);
   const [loading, setLoading] = useState(true);
   const [geocoding, setGeocoding] = useState(false);
   const [geoLocation, setGeoLocation] = useState<GeoLocation | null>(null);
@@ -98,7 +99,14 @@ export default function SponsorRegister() {
         .single();
 
       if (data?.setting_value) {
-        setPromotionLimits(data.setting_value);
+        const limits = data.setting_value as any;
+        setPromotionLimits(limits);
+        // Update plan prices from admin settings
+        setPlanOptions([
+          { value: 'weekly', label: 'Semanal', price: limits.plan_weekly_price ?? 10.00 },
+          { value: 'monthly', label: 'Mensal', price: limits.plan_monthly_price ?? 50.00 },
+          { value: 'annual', label: 'Anual', price: limits.plan_annual_price ?? 400.00 },
+        ]);
       }
     } catch (error) {
       console.error('Erro ao carregar limites:', error);
@@ -250,7 +258,7 @@ export default function SponsorRegister() {
 
         // Upload do novo comprovante
         const paymentProofUrl = await uploadPaymentProof(user.id);
-        const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
+        const selectedPlan = planOptions.find(p => p.value === formData.plan);
 
         // Atualizar registro de patrocinador
         const updateData: any = {
@@ -292,7 +300,7 @@ export default function SponsorRegister() {
 
         // Upload do comprovante
         const paymentProofUrl = await uploadPaymentProof(user.id);
-        const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
+        const selectedPlan = planOptions.find(p => p.value === formData.plan);
         
         // Inserir registro de patrocinador
         const insertData: any = {
@@ -342,7 +350,7 @@ export default function SponsorRegister() {
     }
   };
 
-  const selectedPlan = PLAN_OPTIONS.find(p => p.value === formData.plan);
+  const selectedPlan = planOptions.find(p => p.value === formData.plan);
 
   if (loading) {
     return (
@@ -540,7 +548,7 @@ export default function SponsorRegister() {
                 <AlertDescription className="text-sm">
                   <strong>Limites do plano selecionado:</strong>
                   <ul className="mt-2 space-y-1 list-disc list-inside">
-                    {formData.plan === 'test' ? (
+                    {formData.plan === 'weekly' ? (
                       <>
                         <li>Até <strong>{promotionLimits.basic_test_max_prizes}</strong> prêmios por promoção</li>
                         <li>Até <strong>{promotionLimits.basic_test_max_promotions}</strong> promoções por mês</li>
@@ -563,7 +571,7 @@ export default function SponsorRegister() {
                 value={formData.plan}
                 onValueChange={(value) => setFormData({ ...formData, plan: value })}
               >
-                {PLAN_OPTIONS.map((option) => (
+                {planOptions.map((option) => (
                   <div key={option.value} className="flex items-center space-x-3 p-4 border border-border rounded-lg hover:bg-accent/50 transition-colors">
                     <RadioGroupItem value={option.value} id={option.value} />
                     <Label htmlFor={option.value} className="flex-1 cursor-pointer">

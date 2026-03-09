@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Trophy, X, Circle, Timer } from 'lucide-react';
 
 interface TicTacToeProps {
-  onComplete: () => void;
+  onComplete: (success?: boolean) => void;
   timeLimit: number;
 }
 
@@ -24,6 +24,7 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
   const [gameOver, setGameOver] = useState(false);
   const [message, setMessage] = useState('Ganhe 3 vezes em 60 segundos!');
   const [winningLine, setWinningLine] = useState<number[] | null>(null);
+  const [failures, setFailures] = useState(0);
 
   // Timer countdown
   useEffect(() => {
@@ -106,10 +107,26 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
     setIsPlayerTurn(true);
     setWinningLine(null);
     setWins(0);
+    setFailures(0);
     setTimeLeft(timeLimit);
     setGameOver(false);
     setMessage('Ganhe 3 vezes em 60 segundos!');
   };
+
+  const handleFailure = useCallback((msg: string) => {
+    setFailures(prev => {
+      const newFailures = prev + 1;
+      if (newFailures >= 3) {
+        setMessage('❌ 3 derrotas/empates! Etapa finalizada com 0 pontos.');
+        setGameOver(true);
+        setTimeout(() => onComplete(false), 2000);
+      } else {
+        setMessage(`${msg} (${newFailures}/3 falhas)`);
+        setTimeout(resetBoard, 1500);
+      }
+      return newFailures;
+    });
+  }, [onComplete, resetBoard]);
 
   const handleCellClick = (index: number) => {
     if (!isPlayerTurn || board[index] || gameOver) return;
@@ -137,8 +154,7 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
     }
 
     if (isBoardFull(newBoard)) {
-      setMessage('⚖️ Empate! Tente novamente.');
-      setTimeout(resetBoard, 1500);
+      handleFailure('⚖️ Empate!');
       return;
     }
 
@@ -155,14 +171,12 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
         
         if (compWinner === 'O') {
           setWinningLine(compLine);
-          setMessage('😅 O computador venceu! Tente novamente.');
-          setTimeout(resetBoard, 1500);
+          handleFailure('😅 O computador venceu!');
           return;
         }
 
         if (isBoardFull(newBoard)) {
-          setMessage('⚖️ Empate! Tente novamente.');
-          setTimeout(resetBoard, 1500);
+          handleFailure('⚖️ Empate!');
           return;
         }
 
@@ -175,7 +189,7 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
     <div className="bg-card border border-border rounded-lg p-6 space-y-6 animate-slide-up">
       <div className="text-center space-y-4">
         <h2 className="text-3xl font-bold bg-gradient-primary bg-clip-text text-transparent">
-          Jogo da Velha
+          Tic-Tac-Toe
         </h2>
         
         <div className="flex items-center justify-center gap-4">
@@ -225,14 +239,14 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
           Você joga com <X className="inline w-4 h-4 text-primary" /> • Computador joga com <Circle className="inline w-4 h-4 text-destructive" />
         </p>
         
-        {gameOver && wins < 3 && (
+        {gameOver && wins < 3 && failures < 3 && (
           <Button
             onClick={restartGame}
             variant="game"
             size="lg"
             className="w-full"
           >
-            🔄 Reiniciar Jogo da Velha
+            🔄 Reiniciar Tic-Tac-Toe
           </Button>
         )}
       </div>
