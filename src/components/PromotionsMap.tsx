@@ -322,7 +322,15 @@ export default function PromotionsMap({ sponsors, onSelectSponsor, onClose }: Pr
             <p className="text-white font-bold text-lg text-center drop-shadow-lg">
               {selectedSponsor.name}
             </p>
-            <p className="text-white/80 text-sm text-center drop-shadow">
+            <p className="text-white/90 text-sm text-center drop-shadow font-medium">
+              🎁 {selectedSponsor.prize_description}
+            </p>
+            {selectedSponsor.promotion_end_date && (
+              <p className="text-white/80 text-xs text-center drop-shadow">
+                📅 Até {format(new Date(selectedSponsor.promotion_end_date), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+              </p>
+            )}
+            <p className="text-white/70 text-xs text-center drop-shadow mt-1">
               Toque no logo para jogar
             </p>
             <Button 

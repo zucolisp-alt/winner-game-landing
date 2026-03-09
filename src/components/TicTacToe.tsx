@@ -226,14 +226,14 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
           Você joga com <X className="inline w-4 h-4 text-primary" /> • Computador joga com <Circle className="inline w-4 h-4 text-destructive" />
         </p>
         
-        {gameOver && wins < 3 && (
+        {gameOver && wins < 3 && failures < 3 && (
           <Button
             onClick={restartGame}
             variant="game"
             size="lg"
             className="w-full"
           >
-            🔄 Reiniciar Jogo da Velha
+            🔄 Reiniciar Tic-Tac-Toe
           </Button>
         )}
       </div>

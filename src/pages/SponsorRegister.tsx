@@ -24,8 +24,8 @@ interface GeoLocation {
   formattedAddress?: string;
 }
 
-const PLAN_OPTIONS = [
-  { value: 'test', label: 'Teste', price: 10.00 },
+const DEFAULT_PLAN_OPTIONS = [
+  { value: 'weekly', label: 'Semanal', price: 10.00 },
   { value: 'monthly', label: 'Mensal', price: 50.00 },
   { value: 'annual', label: 'Anual', price: 400.00 },
 ];
