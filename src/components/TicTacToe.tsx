@@ -171,8 +171,7 @@ export function TicTacToe({ onComplete, timeLimit }: TicTacToeProps) {
         
         if (compWinner === 'O') {
           setWinningLine(compLine);
-          setMessage('😅 O computador venceu! Tente novamente.');
-          setTimeout(resetBoard, 1500);
+          handleFailure('😅 O computador venceu!');
           return;
         }
 
