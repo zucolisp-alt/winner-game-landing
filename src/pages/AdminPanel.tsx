@@ -1130,6 +1130,7 @@ export default function AdminPanel() {
     { id: 'list', label: 'Lista Usuários', icon: List, color: 'bg-purple-500 hover:bg-purple-600' },
     { id: 'shortcuts', label: 'Atalhos Etapas', icon: Zap, color: 'bg-cyan-500 hover:bg-cyan-600' },
     { id: 'cities', label: 'Cidades Cadastradas', icon: Building, color: 'bg-teal-500 hover:bg-teal-600' },
+    { id: 'messages', label: `Mensagens${pendingMessagesCount > 0 ? ` (${pendingMessagesCount})` : ''}`, icon: MessageSquare, color: 'bg-pink-500 hover:bg-pink-600' },
   ];
 
   return (
