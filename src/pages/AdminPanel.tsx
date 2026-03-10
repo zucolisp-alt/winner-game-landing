@@ -47,7 +47,13 @@ export default function AdminPanel() {
   const [approvingRegistration, setApprovingRegistration] = useState(false);
   const [editingValidityDate, setEditingValidityDate] = useState(false);
   const [newValidityDate, setNewValidityDate] = useState('');
-  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions' | 'config' | 'cities'>('users');
+  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions' | 'config' | 'cities' | 'messages'>('users');
+  const [supportMessages, setSupportMessages] = useState<any[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [pendingMessagesCount, setPendingMessagesCount] = useState(0);
+  const [selectedMessage, setSelectedMessage] = useState<any | null>(null);
+  const [adminReply, setAdminReply] = useState('');
+  const [sendingReply, setSendingReply] = useState(false);
   const [registeredCities, setRegisteredCities] = useState<any[]>([]);
   const [loadingCities, setLoadingCities] = useState(false);
   const [newCityName, setNewCityName] = useState('');
