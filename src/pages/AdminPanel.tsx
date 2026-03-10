@@ -114,6 +114,7 @@ export default function AdminPanel() {
     checkAdminStatus();
     loadPromotionsSetting();
     loadPromotionLimits();
+    loadPendingMessagesCount();
   }, []);
 
   const loadPromotionLimits = async () => {
