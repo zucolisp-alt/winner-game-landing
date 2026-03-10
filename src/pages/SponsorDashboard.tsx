@@ -144,6 +144,7 @@ export default function SponsorDashboard() {
 
       setActivePromotions(active);
       setExpiredPromotions(expired);
+      setAllPromotions(data || []);
     } catch (error) {
       console.error('Error loading promotions:', error);
     }
