@@ -13,6 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Settings, Users, UserX, Key, List, Zap, Store, CheckCircle, XCircle, Cog } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function AdminPanel() {
   const navigate = useNavigate();
