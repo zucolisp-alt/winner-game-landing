@@ -1192,6 +1192,7 @@ export default function AdminPanel() {
                     if (button.id === 'registrations') loadSponsorRegistrations();
                     if (button.id === 'pending-promotions') loadPendingPromotions();
                     if (button.id === 'cities') loadRegisteredCities();
+                    if (button.id === 'messages') loadSupportMessages();
                   }
                 }}
                 className={`${button.color} text-white h-24 flex flex-col items-center justify-center gap-2 transition-all`}
