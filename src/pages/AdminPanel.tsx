@@ -1122,11 +1122,11 @@ export default function AdminPanel() {
 
   const menuButtons = [
     { id: 'config', label: 'Configuração', icon: Cog, color: 'bg-gray-600 hover:bg-gray-700' },
-    { id: 'create-promotion', label: 'Cadastrar nova promoção', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600', isNavigation: true },
+    { id: 'create-promotion', label: 'Cadastrar Promoção', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600', isNavigation: true },
     { id: 'pending-promotions', label: 'Promoções Pendentes', icon: CheckCircle, color: 'bg-yellow-500 hover:bg-yellow-600' },
     { id: 'sponsors-list', label: 'Promoções', icon: Users, color: 'bg-indigo-500 hover:bg-indigo-600' },
     { id: 'registrations', label: 'Patrocinadores', icon: Store, color: 'bg-orange-500 hover:bg-orange-600' },
-    { id: 'users', label: 'Criar Admin', icon: UserPlus, color: 'bg-green-500 hover:bg-green-600' },
+    { id: 'users', label: 'Administradores', icon: UserPlus, color: 'bg-green-500 hover:bg-green-600' },
     { id: 'delete', label: 'Excluir Usuário', icon: UserX, color: 'bg-red-500 hover:bg-red-600' },
     { id: 'password', label: 'Mudar Senha', icon: Key, color: 'bg-amber-500 hover:bg-amber-600' },
     { id: 'list', label: 'Lista Usuários', icon: List, color: 'bg-purple-500 hover:bg-purple-600' },
@@ -1432,7 +1432,7 @@ export default function AdminPanel() {
                       ) : (
                         <>
                           <UserPlus className="mr-2 h-4 w-4" />
-                          Criar Admin
+                          Administradores
                         </>
                       )}
                     </Button>
