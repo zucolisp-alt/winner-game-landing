@@ -10,7 +10,7 @@ import { createAdminUser } from '@/lib/adminUtils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Settings, Users, UserX, Key, List, Zap, Store, CheckCircle, XCircle, Cog } from 'lucide-react';
+import { Settings, Users, UserX, Key, List, Zap, Store, CheckCircle, XCircle, Cog, Gamepad } from 'lucide-react';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +49,7 @@ export default function AdminPanel() {
   const [approvingRegistration, setApprovingRegistration] = useState(false);
   const [editingValidityDate, setEditingValidityDate] = useState(false);
   const [newValidityDate, setNewValidityDate] = useState('');
-  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions' | 'config' | 'cities' | 'messages'>('users');
+  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions' | 'config' | 'game-parameters' | 'cities' | 'messages'>('users');
   const [supportMessages, setSupportMessages] = useState<any[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [pendingMessagesCount, setPendingMessagesCount] = useState(0);
@@ -73,6 +73,10 @@ export default function AdminPanel() {
     max_daily_plays: 50,
     map_radius_km: 25,
   });
+  const [gameParameters, setGameParameters] = useState<any[]>([]);
+  const [editedGameParameters, setEditedGameParameters] = useState<Record<string, any>>({});
+  const [loadingGameParameters, setLoadingGameParameters] = useState(false);
+  const [savingGameParameters, setSavingGameParameters] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [togglingPromotions, setTogglingPromotions] = useState(false);
@@ -143,6 +147,138 @@ export default function AdminPanel() {
       }
     } catch (error) {
       console.error('Erro ao carregar limites:', error);
+    }
+  };
+
+  const getGameParameterRowKey = (row: any, index: number) => {
+    return row.id ?? row.parameter_key ?? row.key ?? `row-${index}`;
+  };
+
+  const getGameParameterIdentifier = (row: any) => {
+    if (row.id) return { field: 'id', value: row.id };
+    if (row.parameter_key) return { field: 'parameter_key', value: row.parameter_key };
+    if (row.key) return { field: 'key', value: row.key };
+    return null;
+  };
+
+  const loadGameParameters = async () => {
+    setLoadingGameParameters(true);
+    try {
+      const result: any = await supabase
+        .from('game_parameters' as any)
+        .select('*');
+
+      if (result.error) throw result.error;
+
+      const data = result.data || [];
+      setGameParameters(data);
+      const editedMap: Record<string, any> = {};
+      data.forEach((row: any, index: number) => {
+        editedMap[getGameParameterRowKey(row, index)] = { ...row };
+      });
+      setEditedGameParameters(editedMap);
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao carregar parâmetros de jogos',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingGameParameters(false);
+    }
+  };
+
+  const handleGameParameterFieldChange = (rowKey: string, field: string, value: any, originalValue: any) => {
+    const parsedValue = typeof originalValue === 'number' ? Number(value) : value;
+    setEditedGameParameters((prev) => ({
+      ...prev,
+      [rowKey]: {
+        ...prev[rowKey],
+        [field]: parsedValue,
+      },
+    }));
+  };
+
+  const handleSaveGameParameter = async (rowKey: string, row: any) => {
+    const editedRow = editedGameParameters[rowKey];
+    const identifier = getGameParameterIdentifier(row);
+
+    if (!identifier) {
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível identificar o registro para atualização.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    const payload = { ...editedRow };
+    delete payload[identifier.field];
+    delete payload.created_at;
+    delete payload.updated_at;
+
+    setSavingGameParameters(true);
+    try {
+      const { error } = await supabase
+        .from('game_parameters' as any)
+        .update(payload)
+        .eq(identifier.field, identifier.value);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Parâmetro salvo',
+        description: 'As alterações foram gravadas com sucesso.',
+      });
+      loadGameParameters();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao salvar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingGameParameters(false);
+    }
+  };
+
+  const handleSaveAllGameParameters = async () => {
+    if (!gameParameters.length) return;
+    setSavingGameParameters(true);
+    try {
+      for (let index = 0; index < gameParameters.length; index += 1) {
+        const row = gameParameters[index];
+        const rowKey = getGameParameterRowKey(row, index);
+        const editedRow = editedGameParameters[rowKey];
+        const identifier = getGameParameterIdentifier(row);
+        if (!identifier) continue;
+
+        const payload = { ...editedRow };
+        delete payload[identifier.field];
+        delete payload.created_at;
+        delete payload.updated_at;
+
+        const { error } = await supabase
+          .from('game_parameters' as any)
+          .update(payload)
+          .eq(identifier.field, identifier.value);
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: 'Alterações salvas',
+        description: 'Todos os parâmetros foram atualizados.',
+      });
+      loadGameParameters();
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao salvar',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setSavingGameParameters(false);
     }
   };
 
@@ -1122,6 +1258,7 @@ export default function AdminPanel() {
 
   const menuButtons = [
     { id: 'config', label: 'Configuração', icon: Cog, color: 'bg-gray-600 hover:bg-gray-700' },
+    { id: 'game-parameters', label: 'Parâmetros Jogos', icon: Gamepad, color: 'bg-slate-600 hover:bg-slate-700' },
     { id: 'create-promotion', label: 'Cadastrar nova promoção', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600', isNavigation: true },
     { id: 'pending-promotions', label: 'Promoções Pendentes', icon: CheckCircle, color: 'bg-yellow-500 hover:bg-yellow-600' },
     { id: 'sponsors-list', label: 'Promoções', icon: Users, color: 'bg-indigo-500 hover:bg-indigo-600' },
@@ -1193,6 +1330,7 @@ export default function AdminPanel() {
                     if (button.id === 'sponsors-list') loadSponsors();
                     if (button.id === 'registrations') loadSponsorRegistrations();
                     if (button.id === 'pending-promotions') loadPendingPromotions();
+                    if (button.id === 'game-parameters') loadGameParameters();
                     if (button.id === 'cities') loadRegisteredCities();
                     if (button.id === 'messages') loadSupportMessages();
                   }
@@ -1387,6 +1525,104 @@ export default function AdminPanel() {
                   </>
                 ) : 'Salvar Configurações'}
               </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {activeSection === 'game-parameters' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Parâmetros Jogos</CardTitle>
+              <CardDescription>Listar e alterar parâmetros da tabela game_parameters</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingGameParameters ? (
+                <div className="flex justify-center p-8">
+                  <Loader2 className="h-8 w-8 animate-spin" />
+                </div>
+              ) : gameParameters.length === 0 ? (
+                <p className="text-center text-muted-foreground p-8">Nenhum parâmetro encontrado.</p>
+              ) : (
+                <div className="space-y-4">
+                  {gameParameters.map((param, index) => {
+                    const rowKey = getGameParameterRowKey(param, index);
+                    const editedRow = editedGameParameters[rowKey] || param;
+                    const fields = Object.keys(param).filter((key) => !['id', 'created_at', 'updated_at'].includes(key));
+
+                    return (
+                      <Card key={rowKey} className="border">
+                        <CardContent className="space-y-4">
+                          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                            <div>
+                              <p className="font-semibold text-base">
+                                {param.parameter_key ?? param.name ?? `Registro ${index + 1}`}
+                              </p>
+                              {param.description && (
+                                <p className="text-sm text-muted-foreground">
+                                  {param.description}
+                                </p>
+                              )}
+                            </div>
+                            <Button
+                              onClick={() => handleSaveGameParameter(rowKey, param)}
+                              disabled={savingGameParameters}
+                              size="sm"
+                            >
+                              Salvar
+                            </Button>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {fields.map((field) => {
+                              const value = editedRow[field] ?? '';
+                              const originalValue = param[field];
+                              const isTextarea = typeof value === 'string' && value.length > 90;
+
+                              return (
+                                <div key={field} className="space-y-2">
+                                  <Label>{field}</Label>
+                                  {isTextarea ? (
+                                    <Textarea
+                                      value={value}
+                                      onChange={(e) =>
+                                        handleGameParameterFieldChange(rowKey, field, e.target.value, originalValue)
+                                      }
+                                    />
+                                  ) : (
+                                    <Input
+                                      type={typeof originalValue === 'number' ? 'number' : 'text'}
+                                      value={value as string | number}
+                                      onChange={(e) =>
+                                        handleGameParameterFieldChange(rowKey, field, e.target.value, originalValue)
+                                      }
+                                    />
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+
+                  <Button
+                    onClick={handleSaveAllGameParameters}
+                    disabled={savingGameParameters}
+                    className="w-full"
+                    size="lg"
+                  >
+                    {savingGameParameters ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Salvando...
+                      </>
+                    ) : (
+                      'Salvar todas as alterações'
+                    )}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         )}
