@@ -49,7 +49,7 @@ export default function AdminPanel() {
   const [approvingRegistration, setApprovingRegistration] = useState(false);
   const [editingValidityDate, setEditingValidityDate] = useState(false);
   const [newValidityDate, setNewValidityDate] = useState('');
-  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions' | 'config' | 'game-parameters' | 'cities' | 'messages'>('users');
+  const [activeSection, setActiveSection] = useState<'users' | 'delete' | 'password' | 'list' | 'shortcuts' | 'sponsors-list' | 'registrations' | 'pending-promotions' | 'config' | 'game-parameters' | 'monitor-game' | 'cities' | 'messages'>('users');
   const [supportMessages, setSupportMessages] = useState<any[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [pendingMessagesCount, setPendingMessagesCount] = useState(0);
@@ -81,6 +81,13 @@ export default function AdminPanel() {
   const [promotionsEnabled, setPromotionsEnabled] = useState(true);
   const [togglingPromotions, setTogglingPromotions] = useState(false);
   const [pendingPromotions, setPendingPromotions] = useState<any[]>([]);
+  const [gamePlayDate, setGamePlayDate] = useState('');
+  const [gamePlayTime, setGamePlayTime] = useState('');
+  const [gamePlayPromotionQuery, setGamePlayPromotionQuery] = useState('');
+  const [gamePlayPlayerQuery, setGamePlayPlayerQuery] = useState('');
+  const [gamePlayEntries, setGamePlayEntries] = useState<any[]>([]);
+  const [selectedGamePlay, setSelectedGamePlay] = useState<any | null>(null);
+  const [loadingGamePlayEntries, setLoadingGamePlayEntries] = useState(false);
   const [loadingPendingPromotions, setLoadingPendingPromotions] = useState(false);
   const [approvingPromotion, setApprovingPromotion] = useState(false);
   const [selectedPendingPromotion, setSelectedPendingPromotion] = useState<any | null>(null);
@@ -279,6 +286,113 @@ export default function AdminPanel() {
       });
     } finally {
       setSavingGameParameters(false);
+    }
+  };
+
+  const loadGamePlayEntries = async () => {
+    setLoadingGamePlayEntries(true);
+    try {
+      let userIds: string[] | null = null;
+      let sponsorIds: string[] | null = null;
+
+      if (gamePlayPlayerQuery.trim()) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id')
+          .or(`name.ilike.%${gamePlayPlayerQuery}%,email.ilike.%${gamePlayPlayerQuery}%`);
+
+        if (profileError) throw profileError;
+
+        userIds = (profileData || []).map((profile: any) => profile.id);
+        if (userIds.length === 0) {
+          setGamePlayEntries([]);
+          setSelectedGamePlay(null);
+          return;
+        }
+      }
+
+      if (gamePlayPromotionQuery.trim()) {
+        const { data: sponsorData, error: sponsorError } = await supabase
+          .from('sponsors')
+          .select('id')
+          .or(`name.ilike.%${gamePlayPromotionQuery}%,prize_description.ilike.%${gamePlayPromotionQuery}%`);
+
+        if (sponsorError) throw sponsorError;
+
+        sponsorIds = (sponsorData || []).map((sponsor: any) => sponsor.id);
+        if (sponsorIds.length === 0) {
+          setGamePlayEntries([]);
+          setSelectedGamePlay(null);
+          return;
+        }
+      }
+
+      let query: any = supabase.from('game_play' as any).select('*');
+
+      if (userIds) query = query.in('user_id', userIds);
+      if (sponsorIds) query = query.in('sponsor_id', sponsorIds);
+
+      if (gamePlayDate) {
+        const startDate = new Date(`${gamePlayDate}T00:00:00`);
+        let rangeStart = startDate;
+        let rangeEnd = new Date(startDate);
+        rangeEnd.setDate(rangeEnd.getDate() + 1);
+
+        if (gamePlayTime) {
+          const [hours, minutes] = gamePlayTime.split(':').map(Number);
+          rangeStart = new Date(startDate);
+          rangeStart.setHours(hours, minutes, 0, 0);
+          rangeEnd = new Date(rangeStart);
+          rangeEnd.setMinutes(rangeEnd.getMinutes() + 1);
+        }
+
+        query = query
+          .gte('started_at', rangeStart.toISOString())
+          .lt('started_at', rangeEnd.toISOString());
+      }
+
+      const { data, error } = await query
+        .order('started_at', { ascending: false })
+        .limit(5);
+
+      if (error) throw error;
+
+      const entries = data || [];
+      const playerIds = [...new Set(entries.map((entry: any) => entry.user_id).filter(Boolean))];
+      const sponsorIdsToFetch = [...new Set(entries.map((entry: any) => entry.sponsor_id).filter(Boolean))];
+
+      const profilePromise = playerIds.length
+        ? supabase.from('profiles').select('id,name,email').in('id', playerIds)
+        : Promise.resolve({ data: [], error: null } as any);
+      const sponsorPromise = sponsorIdsToFetch.length
+        ? supabase.from('sponsors').select('id,name').in('id', sponsorIdsToFetch)
+        : Promise.resolve({ data: [], error: null } as any);
+
+      const [profilesRes, sponsorsRes] = await Promise.all([profilePromise, sponsorPromise]);
+
+      if (profilesRes.error) throw profilesRes.error;
+      if (sponsorsRes.error) throw sponsorsRes.error;
+
+      const profileMap = new Map((profilesRes.data || []).map((profile: any) => [profile.id, profile]));
+      const sponsorMap = new Map((sponsorsRes.data || []).map((sponsor: any) => [sponsor.id, sponsor]));
+
+      const enriched = entries.map((entry: any) => ({
+        ...entry,
+        player_name: profileMap.get(entry.user_id)?.name || null,
+        player_email: profileMap.get(entry.user_id)?.email || null,
+        sponsor_name: sponsorMap.get(entry.sponsor_id)?.name || null,
+      }));
+
+      setGamePlayEntries(enriched);
+      setSelectedGamePlay(enriched[0] || null);
+    } catch (error: any) {
+      toast({
+        title: 'Erro ao carregar jogos',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoadingGamePlayEntries(false);
     }
   };
 
@@ -1259,6 +1373,7 @@ export default function AdminPanel() {
   const menuButtons = [
     { id: 'config', label: 'Configuração', icon: Cog, color: 'bg-gray-600 hover:bg-gray-700' },
     { id: 'game-parameters', label: 'Parâmetros Jogos', icon: Gamepad, color: 'bg-slate-600 hover:bg-slate-700' },
+    { id: 'monitor-game', label: 'Monitorar Jogo', icon: List, color: 'bg-slate-800 hover:bg-slate-900' },
     { id: 'create-promotion', label: 'Cadastrar nova promoção', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600', isNavigation: true },
     { id: 'pending-promotions', label: 'Promoções Pendentes', icon: CheckCircle, color: 'bg-yellow-500 hover:bg-yellow-600' },
     { id: 'sponsors-list', label: 'Promoções', icon: Users, color: 'bg-indigo-500 hover:bg-indigo-600' },
@@ -1331,6 +1446,7 @@ export default function AdminPanel() {
                     if (button.id === 'registrations') loadSponsorRegistrations();
                     if (button.id === 'pending-promotions') loadPendingPromotions();
                     if (button.id === 'game-parameters') loadGameParameters();
+                    if (button.id === 'monitor-game') loadGamePlayEntries();
                     if (button.id === 'cities') loadRegisteredCities();
                     if (button.id === 'messages') loadSupportMessages();
                   }
@@ -1622,6 +1738,188 @@ export default function AdminPanel() {
                     )}
                   </Button>
                 </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {activeSection === 'monitor-game' && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Monitorar Jogo</CardTitle>
+              <CardDescription>Filtre por data/hora, promoção ou jogador e visualize as últimas 5 ocorrências.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Data</Label>
+                  <Input
+                    type="date"
+                    value={gamePlayDate}
+                    onChange={(e) => setGamePlayDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Hora e minuto</Label>
+                  <Input
+                    type="time"
+                    value={gamePlayTime}
+                    onChange={(e) => setGamePlayTime(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Promoção</Label>
+                  <Input
+                    value={gamePlayPromotionQuery}
+                    onChange={(e) => setGamePlayPromotionQuery(e.target.value)}
+                    placeholder="Nome da promoção ou descrição"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Jogador</Label>
+                  <Input
+                    value={gamePlayPlayerQuery}
+                    onChange={(e) => setGamePlayPlayerQuery(e.target.value)}
+                    placeholder="Nome ou email do jogador"
+                  />
+                </div>
+              </div>
+
+              <Button
+                onClick={loadGamePlayEntries}
+                disabled={loadingGamePlayEntries}
+                className="w-full"
+                size="lg"
+              >
+                {loadingGamePlayEntries ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Buscando...
+                  </>
+                ) : (
+                  'Buscar ocorrências'
+                )}
+              </Button>
+
+              {gamePlayEntries.length === 0 ? (
+                <p className="text-center text-muted-foreground">Nenhuma ocorrência encontrada.</p>
+              ) : (
+                <Card className="border">
+                  <CardHeader>
+                    <CardTitle>Últimas 5 ocorrências</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <ScrollArea className="max-h-[340px]">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Início</TableHead>
+                            <TableHead>Token do jogo</TableHead>
+                            <TableHead>Jogador</TableHead>
+                            <TableHead>Promoção</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Pontos</TableHead>
+                            <TableHead className="text-right">Ações</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {gamePlayEntries.map((entry) => (
+                            <TableRow key={entry.id}>
+                              <TableCell>{new Date(entry.started_at).toLocaleString()}</TableCell>
+                              <TableCell className="max-w-[160px] truncate" title={entry.game_token}>{entry.game_token}</TableCell>
+                              <TableCell>{entry.player_name || entry.player_email || entry.user_id}</TableCell>
+                              <TableCell>{entry.sponsor_name || entry.sponsor_id || '-'}</TableCell>
+                              <TableCell>{entry.status}</TableCell>
+                              <TableCell>{entry.total_points}</TableCell>
+                              <TableCell className="text-right">
+                                <Button size="sm" onClick={() => setSelectedGamePlay(entry)}>
+                                  Ver
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </ScrollArea>
+                  </CardContent>
+                </Card>
+              )}
+
+              {selectedGamePlay && (
+                <Card className="border">
+                  <CardHeader>
+                    <CardTitle>Detalhes da ocorrência</CardTitle>
+                    <CardDescription>Visualize as informações completas do registro selecionado.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>Token do jogo</Label>
+                        <p>{selectedGamePlay.game_token}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Token do usuário</Label>
+                        <p>{selectedGamePlay.user_id}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Promoção</Label>
+                        <p>{selectedGamePlay.sponsor_name || selectedGamePlay.sponsor_id || '-'}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Status</Label>
+                        <p>{selectedGamePlay.status}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Motivo do abandono</Label>
+                        <p>{selectedGamePlay.abandon_reason || '-'}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Etapa atual</Label>
+                        <p>{selectedGamePlay.current_stage + 1} de 10</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Total de pontos</Label>
+                        <p>{selectedGamePlay.total_points}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Iniciado em</Label>
+                        <p>{new Date(selectedGamePlay.started_at).toLocaleString()}</p>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Concluído em</Label>
+                        <p>{selectedGamePlay.completed_at ? new Date(selectedGamePlay.completed_at).toLocaleString() : '-'}</p>
+                      </div>
+                    </div>
+
+                    <Card className="border">
+                      <CardHeader>
+                        <CardTitle>Jogadas por etapa</CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-0">
+                        <ScrollArea className="max-h-[320px]">
+                          <Table>
+                            <TableHeader>
+                              <TableRow>
+                                <TableHead>Etapa</TableHead>
+                                <TableHead>Pontos</TableHead>
+                                <TableHead>Token da etapa</TableHead>
+                              </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                              {(selectedGamePlay.stage_points || []).map((points: any, index: number) => (
+                                <TableRow key={index}>
+                                  <TableCell>{index + 1}</TableCell>
+                                  <TableCell>{points}</TableCell>
+                                  <TableCell>{selectedGamePlay.stage_tokens?.[index] || '-'}</TableCell>
+                                </TableRow>
+                              ))}
+                            </TableBody>
+                          </Table>
+                        </ScrollArea>
+                      </CardContent>
+                    </Card>
+                  </CardContent>
+                </Card>
               )}
             </CardContent>
           </Card>
