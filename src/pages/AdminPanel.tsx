@@ -1375,7 +1375,7 @@ export default function AdminPanel() {
     { id: 'config', label: 'Configuração', icon: Cog, color: 'bg-gray-600 hover:bg-gray-700' },
     { id: 'game-parameters', label: 'Parâmetros Jogos', icon: Gamepad, color: 'bg-slate-600 hover:bg-slate-700' },
     { id: 'monitor-game', label: 'Monitorar Jogo', icon: List, color: 'bg-slate-800 hover:bg-slate-900' },
-    { id: 'create-promotion', label: 'Cadastrar nova promoção', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600', isNavigation: true },
+    { id: 'create-promotion', label: 'Cadastrar Promoção', icon: Settings, color: 'bg-blue-500 hover:bg-blue-600', isNavigation: true },
     { id: 'pending-promotions', label: 'Promoções Pendentes', icon: CheckCircle, color: 'bg-yellow-500 hover:bg-yellow-600' },
     { id: 'sponsors-list', label: 'Promoções', icon: Users, color: 'bg-indigo-500 hover:bg-indigo-600' },
     { id: 'registrations', label: 'Patrocinadores', icon: Store, color: 'bg-orange-500 hover:bg-orange-600' },
