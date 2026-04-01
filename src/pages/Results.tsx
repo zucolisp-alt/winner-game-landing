@@ -11,7 +11,7 @@ import { FixedHeader } from '@/components/FixedHeader';
 
 export default function Results() {
   const navigate = useNavigate();
-  const { userData, totalPoints, stagePoints, wheelPoints, resetGame, selectedSponsor } = useGame();
+  const { userData, totalPoints, stagePoints, wheelPoints, resetGame, selectedSponsor, gamePlayId } = useGame();
   const [rankingPosition, setRankingPosition] = useState<number | null>(null);
   const [isClassified, setIsClassified] = useState<boolean | null>(null);
   
