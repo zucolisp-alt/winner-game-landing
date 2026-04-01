@@ -15,14 +15,21 @@ import { useDailyPlayLimit } from '@/hooks/useDailyPlayLimit';
 import { Timer, Target, LogOut, AlertTriangle, Clock } from 'lucide-react';
 import { SettingsMenu } from '@/components/SettingsMenu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const STAGE_BASE_POINTS = [100, 200, 300, 400, 500];
+
+interface GameParam {
+  max_score: number;
+  max_time_seconds: number;
+}
 
 export default function GameStage() {
   const { stage } = useParams<{ stage: string }>();
   const stageNumber = parseInt(stage || '1') - 1;
   const navigate = useNavigate();
-  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor } = useGame();
+  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor, resetGame } = useGame();
   const { toast } = useToast();
   const { playsToday, maxDailyPlays, remainingPlays, isBlocked, showWarning, loading: limitLoading } = useDailyPlayLimit(userData?.name);
   
@@ -31,6 +38,8 @@ export default function GameStage() {
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [challengeComplete, seteChallengeComplete] = useState(false);
+  const [gameParams, setGameParams] = useState<Record<number, GameParam>>({});
+  const [showViolationDialog, setShowViolationDialog] = useState(false);
 
   useEffect(() => {
     // Check for test mode
@@ -51,8 +60,26 @@ export default function GameStage() {
     }
   }, [userData, navigate, setUserData, setSelectedSponsor]);
 
+  // Fetch game parameters
   useEffect(() => {
-    let interval: NodeJS.Timeout;
+    const fetchParams = async () => {
+      const { data } = await supabase
+        .from('game_parameters')
+        .select('stage_number, max_score, max_time_seconds, stage_type')
+        .eq('stage_type', 'game');
+      if (data) {
+        const map: Record<number, GameParam> = {};
+        data.forEach((p: any) => {
+          map[p.stage_number] = { max_score: p.max_score, max_time_seconds: p.max_time_seconds };
+        });
+        setGameParams(map);
+      }
+    };
+    fetchParams();
+  }, []);
+
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
     if (isTimerRunning) {
       interval = setInterval(() => {
         setTimer(prev => prev + 1);
@@ -72,10 +99,36 @@ export default function GameStage() {
     }
   }, [showWarning, stageNumber, limitLoading]);
 
+  const triggerViolation = () => {
+    setShowViolationDialog(true);
+    setIsTimerRunning(false);
+    setTimeout(() => {
+      resetGame();
+      navigate('/sponsor-selection');
+    }, 15000);
+  };
+
+  const handleViolationOk = () => {
+    setShowViolationDialog(false);
+    resetGame();
+    navigate('/sponsor-selection');
+  };
+
   const handleWheelComplete = () => {
     setShowWheel(false);
     setShowChallenge(true);
     setIsTimerRunning(true);
+  };
+
+  const checkViolation = (points: number, timeUsed: number): boolean => {
+    const stageNum = stageNumber + 1;
+    const param = gameParams[stageNum];
+    if (!param) return false;
+    if (points > param.max_score || timeUsed > param.max_time_seconds) {
+      triggerViolation();
+      return true;
+    }
+    return false;
   };
 
   const handleChallengeComplete = (success: boolean = true) => {
@@ -86,6 +139,8 @@ export default function GameStage() {
       const timeBonus = Math.floor((30 - timer) * 5);
       const totalPoints = Math.max(basePoints + timeBonus, basePoints);
       
+      if (checkViolation(totalPoints, timer)) return;
+
       addPoints(totalPoints);
       addStagePoints(stageNumber, totalPoints);
       
@@ -109,6 +164,8 @@ export default function GameStage() {
     setIsTimerRunning(false);
     
     if (score > 0) {
+      if (checkViolation(score, timer)) return;
+
       addPoints(score);
       addStagePoints(stageNumber, score);
       
@@ -274,6 +331,26 @@ export default function GameStage() {
             </Button>
           </div>
         )}
+
+        {/* Violation Dialog */}
+        <Dialog open={showViolationDialog} onOpenChange={() => {}}>
+          <DialogContent className="bg-yellow-100 border-2 border-yellow-500 max-w-md [&>button]:hidden">
+            <div className="text-center space-y-6 py-4">
+              <AlertTriangle className="w-16 h-16 text-destructive mx-auto" />
+              <p className="text-xl font-bold text-destructive">
+                Parâmetros de jogo inconsistentes, o jogo será reiniciado.
+              </p>
+              <Button
+                variant="outline"
+                size="xl"
+                onClick={handleViolationOk}
+                className="w-full border-yellow-500 text-yellow-800 hover:bg-yellow-200"
+              >
+                OK
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
       </div>
     </div>
