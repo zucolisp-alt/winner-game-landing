@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Building2, MapPin, Award, Loader2, Clock, Search, X, Map } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/contexts/GameContext';
+import { generateGameToken } from '@/lib/gameTokens';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { FixedHeader } from '@/components/FixedHeader';
