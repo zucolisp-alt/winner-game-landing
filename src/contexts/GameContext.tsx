@@ -93,6 +93,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         addStagePoints,
         wheelPoints,
         addWheelPoints,
+        gamePlayId,
+        setGamePlayId,
         resetGame,
       }}
     >
