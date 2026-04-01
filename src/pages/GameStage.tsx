@@ -332,6 +332,26 @@ export default function GameStage() {
           </div>
         )}
 
+        {/* Violation Dialog */}
+        <Dialog open={showViolationDialog} onOpenChange={() => {}}>
+          <DialogContent className="bg-yellow-100 border-2 border-yellow-500 max-w-md [&>button]:hidden">
+            <div className="text-center space-y-6 py-4">
+              <AlertTriangle className="w-16 h-16 text-destructive mx-auto" />
+              <p className="text-xl font-bold text-destructive">
+                Parâmetros de jogo inconsistentes, o jogo será reiniciado.
+              </p>
+              <Button
+                variant="outline"
+                size="xl"
+                onClick={handleViolationOk}
+                className="w-full border-yellow-500 text-yellow-800 hover:bg-yellow-200"
+              >
+                OK
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </div>
   );
