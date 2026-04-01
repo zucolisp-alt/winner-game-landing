@@ -374,8 +374,8 @@ export default function AdminPanel() {
       if (profilesRes.error) throw profilesRes.error;
       if (sponsorsRes.error) throw sponsorsRes.error;
 
-      const profileMap = new Map((profilesRes.data || []).map((profile: any) => [profile.id, profile]));
-      const sponsorMap = new Map((sponsorsRes.data || []).map((sponsor: any) => [sponsor.id, sponsor]));
+      const profileMap = new Map<string, { id: string; name: string; email: string }>((profilesRes.data || []).map((profile: any) => [profile.id, profile]));
+      const sponsorMap = new Map<string, { id: string; name: string }>((sponsorsRes.data || []).map((sponsor: any) => [sponsor.id, sponsor]));
 
       const enriched = entries.map((entry: any) => ({
         ...entry,
