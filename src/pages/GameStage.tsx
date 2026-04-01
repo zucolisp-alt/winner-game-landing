@@ -15,14 +15,21 @@ import { useDailyPlayLimit } from '@/hooks/useDailyPlayLimit';
 import { Timer, Target, LogOut, AlertTriangle, Clock } from 'lucide-react';
 import { SettingsMenu } from '@/components/SettingsMenu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 const STAGE_BASE_POINTS = [100, 200, 300, 400, 500];
+
+interface GameParam {
+  max_score: number;
+  max_time_seconds: number;
+}
 
 export default function GameStage() {
   const { stage } = useParams<{ stage: string }>();
   const stageNumber = parseInt(stage || '1') - 1;
   const navigate = useNavigate();
-  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor } = useGame();
+  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor, resetGame } = useGame();
   const { toast } = useToast();
   const { playsToday, maxDailyPlays, remainingPlays, isBlocked, showWarning, loading: limitLoading } = useDailyPlayLimit(userData?.name);
   
@@ -31,6 +38,8 @@ export default function GameStage() {
   const [timer, setTimer] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [challengeComplete, seteChallengeComplete] = useState(false);
+  const [gameParams, setGameParams] = useState<Record<number, GameParam>>({});
+  const [showViolationDialog, setShowViolationDialog] = useState(false);
 
   useEffect(() => {
     // Check for test mode
