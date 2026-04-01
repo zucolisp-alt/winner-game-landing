@@ -48,6 +48,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [currentStage, setCurrentStage] = useState(0);
   const [stagePoints, setStagePoints] = useState<number[]>([0, 0, 0, 0, 0]);
   const [wheelPoints, setWheelPoints] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [gamePlayId, setGamePlayId] = useState<string | null>(null);
 
   const addPoints = (points: number) => {
     setTotalPoints(prev => prev + points);
