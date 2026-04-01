@@ -35,7 +35,7 @@ const ITEMS_PER_PAGE = 10;
 export default function SponsorSelection() {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { setSelectedSponsor, resetGame } = useGame();
+  const { setSelectedSponsor, resetGame, setGamePlayId } = useGame();
   const [sponsors, setSponsors] = useState<Sponsor[]>([]);
   const [loading, setLoading] = useState(true);
   const [selecting, setSelecting] = useState(false);
