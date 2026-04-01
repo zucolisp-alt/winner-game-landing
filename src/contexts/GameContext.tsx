@@ -34,6 +34,8 @@ interface GameContextType {
   addStagePoints: (stage: number, points: number) => void;
   wheelPoints: number[];
   addWheelPoints: (stage: number, points: number) => void;
+  gamePlayId: string | null;
+  setGamePlayId: (id: string | null) => void;
   resetGame: () => void;
 }
 
@@ -46,6 +48,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [currentStage, setCurrentStage] = useState(0);
   const [stagePoints, setStagePoints] = useState<number[]>([0, 0, 0, 0, 0]);
   const [wheelPoints, setWheelPoints] = useState<number[]>([0, 0, 0, 0, 0]);
+  const [gamePlayId, setGamePlayId] = useState<string | null>(null);
 
   const addPoints = (points: number) => {
     setTotalPoints(prev => prev + points);
@@ -72,6 +75,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setCurrentStage(0);
     setStagePoints([0, 0, 0, 0, 0]);
     setWheelPoints([0, 0, 0, 0, 0]);
+    setGamePlayId(null);
   };
 
   return (
@@ -89,6 +93,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         addStagePoints,
         wheelPoints,
         addWheelPoints,
+        gamePlayId,
+        setGamePlayId,
         resetGame,
       }}
     >

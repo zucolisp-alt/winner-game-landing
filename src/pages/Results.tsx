@@ -11,11 +11,27 @@ import { FixedHeader } from '@/components/FixedHeader';
 
 export default function Results() {
   const navigate = useNavigate();
-  const { userData, totalPoints, stagePoints, wheelPoints, resetGame, selectedSponsor } = useGame();
+  const { userData, totalPoints, stagePoints, wheelPoints, resetGame, selectedSponsor, gamePlayId } = useGame();
   const [rankingPosition, setRankingPosition] = useState<number | null>(null);
   const [isClassified, setIsClassified] = useState<boolean | null>(null);
   
   useGameMusic();
+
+  const finalizeGamePlay = async () => {
+    if (!gamePlayId) return;
+    try {
+      await supabase
+        .from('game_play')
+        .update({
+          total_points: totalPoints,
+          completed_at: new Date().toISOString(),
+          status: 'completed',
+        })
+        .eq('id', gamePlayId);
+    } catch (error) {
+      console.error('Error finalizing game play:', error);
+    }
+  };
 
   useEffect(() => {
     if (!userData) {
@@ -23,6 +39,7 @@ export default function Results() {
       return;
     }
     
+    finalizeGamePlay();
     saveGameResult();
   }, [userData, navigate]);
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { SponsorBanner } from '@/components/SponsorBanner';
@@ -17,6 +17,7 @@ import { SettingsMenu } from '@/components/SettingsMenu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { generateStageToken } from '@/lib/gameTokens';
 
 const STAGE_BASE_POINTS = [100, 200, 300, 400, 500];
 
@@ -29,7 +30,7 @@ export default function GameStage() {
   const { stage } = useParams<{ stage: string }>();
   const stageNumber = parseInt(stage || '1') - 1;
   const navigate = useNavigate();
-  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor, resetGame } = useGame();
+  const { addPoints, addStagePoints, userData, setUserData, setSelectedSponsor, resetGame, gamePlayId } = useGame();
   const { toast } = useToast();
   const { playsToday, maxDailyPlays, remainingPlays, isBlocked, showWarning, loading: limitLoading } = useDailyPlayLimit(userData?.name);
   
@@ -40,6 +41,7 @@ export default function GameStage() {
   const [challengeComplete, seteChallengeComplete] = useState(false);
   const [gameParams, setGameParams] = useState<Record<number, GameParam>>({});
   const [showViolationDialog, setShowViolationDialog] = useState(false);
+  const stageStartedRef = useRef(false);
 
   useEffect(() => {
     // Check for test mode
@@ -114,10 +116,46 @@ export default function GameStage() {
     navigate('/sponsor-selection');
   };
 
+  // Track stage start in game_play
+  const trackStageStart = async () => {
+    if (!gamePlayId || stageStartedRef.current) return;
+    stageStartedRef.current = true;
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      const stageToken = generateStageToken(session.user.id, stageNumber + 1);
+      
+      // Update current_stage and stage token
+      const { data: currentPlay } = await supabase
+        .from('game_play')
+        .select('stage_tokens')
+        .eq('id', gamePlayId)
+        .single();
+      
+      if (currentPlay) {
+        const tokens = [...(currentPlay.stage_tokens as string[])];
+        tokens[stageNumber] = stageToken;
+        
+        await supabase
+          .from('game_play')
+          .update({
+            current_stage: stageNumber + 1,
+            stage_tokens: tokens,
+          })
+          .eq('id', gamePlayId);
+      }
+    } catch (error) {
+      console.error('Error tracking stage start:', error);
+    }
+  };
+
   const handleWheelComplete = () => {
     setShowWheel(false);
     setShowChallenge(true);
     setIsTimerRunning(true);
+    trackStageStart();
   };
 
   const checkViolation = (points: number, timeUsed: number): boolean => {
@@ -129,6 +167,30 @@ export default function GameStage() {
       return true;
     }
     return false;
+  };
+
+  // Update stage points in game_play
+  const trackStageEnd = async (points: number) => {
+    if (!gamePlayId) return;
+    try {
+      const { data: currentPlay } = await supabase
+        .from('game_play')
+        .select('stage_points')
+        .eq('id', gamePlayId)
+        .single();
+      
+      if (currentPlay) {
+        const stagePointsArr = [...(currentPlay.stage_points as number[])];
+        stagePointsArr[stageNumber] = points;
+        
+        await supabase
+          .from('game_play')
+          .update({ stage_points: stagePointsArr })
+          .eq('id', gamePlayId);
+      }
+    } catch (error) {
+      console.error('Error tracking stage end:', error);
+    }
   };
 
   const handleChallengeComplete = (success: boolean = true) => {
@@ -143,6 +205,7 @@ export default function GameStage() {
 
       addPoints(totalPoints);
       addStagePoints(stageNumber, totalPoints);
+      trackStageEnd(totalPoints);
       
       toast({
         title: "🎯 Etapa Concluída!",
@@ -150,6 +213,7 @@ export default function GameStage() {
         className: "bg-success text-success-foreground",
       });
     } else {
+      trackStageEnd(0);
       toast({
         title: "Etapa Não Concluída",
         description: "Você não pontuou nesta etapa. Continue para a próxima!",
@@ -168,6 +232,7 @@ export default function GameStage() {
 
       addPoints(score);
       addStagePoints(stageNumber, score);
+      trackStageEnd(score);
       
       toast({
         title: "🎯 Etapa Concluída!",
@@ -175,6 +240,7 @@ export default function GameStage() {
         className: "bg-success text-success-foreground",
       });
     } else {
+      trackStageEnd(0);
       toast({
         title: "Etapa Não Concluída",
         description: "Você não pontuou nesta etapa. Continue para a próxima!",
@@ -186,6 +252,7 @@ export default function GameStage() {
   };
 
   const handleNextStage = () => {
+    stageStartedRef.current = false;
     if (stageNumber < 4) {
       navigate(`/stage/${stageNumber + 2}`);
       setShowWheel(true);
