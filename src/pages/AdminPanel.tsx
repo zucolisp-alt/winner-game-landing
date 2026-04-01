@@ -359,8 +359,8 @@ export default function AdminPanel() {
       if (error) throw error;
 
       const entries = data || [];
-      const playerIds = [...new Set(entries.map((entry: any) => entry.user_id).filter(Boolean))];
-      const sponsorIdsToFetch = [...new Set(entries.map((entry: any) => entry.sponsor_id).filter(Boolean))];
+      const playerIds = [...new Set(entries.map((entry: any) => entry.user_id).filter(Boolean))] as string[];
+      const sponsorIdsToFetch = [...new Set(entries.map((entry: any) => entry.sponsor_id).filter(Boolean))] as string[];
 
       const profilePromise = playerIds.length
         ? supabase.from('profiles').select('id,name,email').in('id', playerIds)
