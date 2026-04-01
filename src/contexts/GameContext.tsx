@@ -34,6 +34,8 @@ interface GameContextType {
   addStagePoints: (stage: number, points: number) => void;
   wheelPoints: number[];
   addWheelPoints: (stage: number, points: number) => void;
+  gamePlayId: string | null;
+  setGamePlayId: (id: string | null) => void;
   resetGame: () => void;
 }
 
