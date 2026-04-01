@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { SponsorBanner } from '@/components/SponsorBanner';
@@ -17,6 +17,7 @@ import { SettingsMenu } from '@/components/SettingsMenu';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { generateStageToken } from '@/lib/gameTokens';
 
 const STAGE_BASE_POINTS = [100, 200, 300, 400, 500];
 
