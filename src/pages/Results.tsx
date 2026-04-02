@@ -115,11 +115,11 @@ export default function Results() {
     }
   };
 
-  const saveGameResult = async () => {
+  const saveGameResult = async (totalPts: number) => {
     if (!userData || !selectedSponsor) return;
 
     // Don't save zero-point results (e.g. when daily limit was exceeded)
-    if (totalPoints <= 0) {
+    if (totalPts <= 0) {
       await checkRankingPosition();
       return;
     }
