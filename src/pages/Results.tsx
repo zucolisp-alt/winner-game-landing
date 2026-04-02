@@ -11,19 +11,52 @@ import { FixedHeader } from '@/components/FixedHeader';
 
 export default function Results() {
   const navigate = useNavigate();
-  const { userData, totalPoints, stagePoints, wheelPoints, resetGame, selectedSponsor, gamePlayId } = useGame();
+  const { userData, resetGame, selectedSponsor, gamePlayId } = useGame();
   const [rankingPosition, setRankingPosition] = useState<number | null>(null);
   const [isClassified, setIsClassified] = useState<boolean | null>(null);
+  const [gameStagePoints, setGameStagePoints] = useState<number[]>([]);
+  const [gameWheelPoints, setGameWheelPoints] = useState<number[]>([]);
+  const [gameTotalPoints, setGameTotalPoints] = useState(0);
   
   useGameMusic();
 
-  const finalizeGamePlay = async () => {
+  const fetchGamePlayData = async () => {
+    if (!gamePlayId) return;
+    try {
+      const { data, error } = await supabase
+        .from('game_play')
+        .select('stage_points')
+        .eq('id', gamePlayId)
+        .single();
+
+      if (error) throw error;
+      if (data) {
+        const sp = data.stage_points as number[];
+        // Wheel points at even indices: 0, 2, 4, 6, 8
+        const wheels = [sp[0] || 0, sp[2] || 0, sp[4] || 0, sp[6] || 0, sp[8] || 0];
+        // Game points at odd indices: 1, 3, 5, 7, 9
+        const games = [sp[1] || 0, sp[3] || 0, sp[5] || 0, sp[7] || 0, sp[9] || 0];
+        
+        setGameWheelPoints(wheels);
+        setGameStagePoints(games);
+        
+        const total = sp.reduce((sum, val) => sum + (val || 0), 0);
+        setGameTotalPoints(total);
+        return total;
+      }
+    } catch (error) {
+      console.error('Error fetching game play data:', error);
+    }
+    return 0;
+  };
+
+  const finalizeGamePlay = async (total: number) => {
     if (!gamePlayId) return;
     try {
       await supabase
         .from('game_play')
         .update({
-          total_points: totalPoints,
+          total_points: total,
           completed_at: new Date().toISOString(),
           status: 'completed',
         })
@@ -39,8 +72,16 @@ export default function Results() {
       return;
     }
     
-    finalizeGamePlay();
-    saveGameResult();
+    const initResults = async () => {
+      const total = await fetchGamePlayData();
+      if (total !== undefined && total > 0) {
+        await finalizeGamePlay(total);
+        await saveGameResult(total);
+      } else {
+        await checkRankingPosition();
+      }
+    };
+    initResults();
   }, [userData, navigate]);
 
   const checkRankingPosition = async () => {
