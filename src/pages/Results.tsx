@@ -248,7 +248,7 @@ export default function Results() {
           </h3>
           
           <div className="space-y-3">
-            {stagePoints.map((points, index) => (
+            {gameStagePoints.map((points, index) => (
               <div key={index} className="space-y-2">
                 <div className="flex justify-between items-center p-3 bg-white/90 rounded-lg border border-primary/20">
                   <span className="font-semibold text-foreground">Etapa {index + 1}</span>
@@ -256,7 +256,7 @@ export default function Results() {
                 </div>
                 <div className="flex justify-between items-center px-3 py-2 bg-white/70 rounded-lg border border-accent/20 text-sm">
                   <span className="text-foreground/70">Pontos da Roleta:</span>
-                  <span className="text-accent font-semibold">{wheelPoints[index].toLocaleString('pt-BR')} pts</span>
+                  <span className="text-accent font-semibold">{(gameWheelPoints[index] || 0).toLocaleString('pt-BR')} pts</span>
                 </div>
               </div>
             ))}
