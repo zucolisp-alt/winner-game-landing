@@ -1853,15 +1853,17 @@ export default function AdminPanel() {
                     <CardDescription>Visualize as informações completas do registro selecionado.</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div className="space-y-2 mb-4">
                       <div className="space-y-2">
                         <Label>Token do jogo</Label>
-                        <p>{selectedGamePlay.game_token}</p>
+                        <p className="break-all text-sm">{selectedGamePlay.game_token}</p>
                       </div>
                       <div className="space-y-2">
                         <Label>Token do usuário</Label>
-                        <p>{selectedGamePlay.user_id}</p>
+                        <p className="break-all text-sm">{selectedGamePlay.user_id}</p>
                       </div>
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label>Promoção</Label>
                         <p>{selectedGamePlay.sponsor_name || selectedGamePlay.sponsor_id || '-'}</p>
