@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { useGame } from '@/contexts/GameContext';
+import { supabase } from '@/integrations/supabase/client';
+import { generateStageToken } from '@/lib/gameTokens';
 
 const WHEEL_VALUES = [500, 300, 800, 100, 200, 600, 1000, 700, 100, 500, 600, 1000];
 
