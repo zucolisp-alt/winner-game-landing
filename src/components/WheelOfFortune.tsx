@@ -10,7 +10,7 @@ export function WheelOfFortune({ onComplete, stage }: { onComplete: () => void; 
   const [isSpinning, setIsSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
   const [showExplosion, setShowExplosion] = useState(false);
-  const { addPoints, addWheelPoints, selectedSponsor } = useGame();
+  const { addPoints, addWheelPoints, selectedSponsor, gamePlayId } = useGame();
   const { toast } = useToast();
 
   // Track wheel stage start in game_play
